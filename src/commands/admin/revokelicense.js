@@ -15,7 +15,6 @@ module.exports = {
                 .setRequired(false)),
 
     async execute(interaction, client) {
-        // Check if user is owner
         if (interaction.user.id !== config.ownerId) {
             return interaction.reply({ 
                 content: '❌ This command is restricted to the bot owner.', 
@@ -36,7 +35,6 @@ module.exports = {
 
         try {
             if (guildId) {
-                // Revoke by guild ID
                 const result = await client.premiumManager.revokePremium(guildId, 'manual');
                 
                 if (result.success) {
@@ -49,7 +47,6 @@ module.exports = {
                     });
                 }
             } else if (licenseKey) {
-                // Get license info
                 const licenseInfo = await client.premiumManager.getLicenseInfo(licenseKey);
                 
                 if (!licenseInfo) {
@@ -59,7 +56,6 @@ module.exports = {
                 }
 
                 if (licenseInfo.activated_guild_id) {
-                    // Revoke the activated license
                     const result = await client.premiumManager.revokePremium(licenseInfo.activated_guild_id, 'manual');
                     
                     if (result.success) {
@@ -72,7 +68,6 @@ module.exports = {
                         });
                     }
                 } else {
-                    // License not activated yet, just mark as revoked
                     await client.db.query(
                         `UPDATE premium_licenses 
                          SET status = 'revoked', 
