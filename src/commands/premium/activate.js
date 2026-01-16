@@ -35,7 +35,6 @@ module.exports = {
                 { name: 'Features Unlocked', value: result.features.length.toString(), inline: true }
             ];
 
-            // Send welcome message to general chat if possible
             try {
                 const generalChannel = interaction.guild.channels.cache.find(
                     ch => ch.type === 0 && ch.permissionsFor(interaction.guild.members.me).has('SendMessages')
