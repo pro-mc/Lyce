@@ -15,47 +15,82 @@ module.exports = {
                 .setRequired(false)),
 
     async execute(interaction, client) {
+        // Check if user is owner
         if (interaction.user.id !== config.ownerId) {
             return interaction.reply({ 
                 content: '❌ This command is restricted to the bot owner.', 
-                ephemeral: true 
+                flags: 64 // Fixed: Use flags instead of ephemeral
             });
         }
 
-        await interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply({ flags: 64 });
 
         const licenseKey = interaction.options.getString('license_key');
         const guildId = interaction.options.getString('guild_id');
 
         if (!licenseKey && !guildId) {
             return interaction.editReply({ 
-                content: 'Please provide either a license key or guild ID.' 
+                content: '❌ Please provide either a license key or guild ID.' 
             });
         }
 
         try {
             if (guildId) {
-                const result = await client.premiumManager.revokeLicense(guildId);
-                await interaction.editReply({ content: result.message });
+                // Revoke by guild ID
+                const result = await client.premiumManager.revokePremium(guildId, 'manual');
+                
+                if (result.success) {
+                    await interaction.editReply({ 
+                        content: `✅ Premium access revoked for guild \`${guildId}\`` 
+                    });
+                } else {
+                    await interaction.editReply({ 
+                        content: `❌ Failed to revoke premium for guild \`${guildId}\`: ${result.message}` 
+                    });
+                }
             } else if (licenseKey) {
+                // Get license info
                 const licenseInfo = await client.premiumManager.getLicenseInfo(licenseKey);
-                if (!licenseInfo || !licenseInfo.license.activated_guild_id) {
-                    return interaction.editReply({ content: 'License not found or not activated.' });
+                
+                if (!licenseInfo) {
+                    return interaction.editReply({ 
+                        content: '❌ License not found.' 
+                    });
                 }
 
-                await client.premiumManager.revokeLicense(licenseInfo.license.activated_guild_id);
-                await client.db.query(
-                    `UPDATE premium_licenses SET status = 'revoked' WHERE license_key = ?`,
-                    [licenseKey]
-                );
-
-                await interaction.editReply({ 
-                    content: `✅ License ${licenseKey} revoked from guild ${licenseInfo.license.activated_guild_id}` 
-                });
+                if (licenseInfo.activated_guild_id) {
+                    // Revoke the activated license
+                    const result = await client.premiumManager.revokePremium(licenseInfo.activated_guild_id, 'manual');
+                    
+                    if (result.success) {
+                        await interaction.editReply({ 
+                            content: `✅ License \`${licenseKey}\` revoked from guild \`${licenseInfo.activated_guild_id}\`` 
+                        });
+                    } else {
+                        await interaction.editReply({ 
+                            content: `❌ Failed to revoke license: ${result.message}` 
+                        });
+                    }
+                } else {
+                    // License not activated yet, just mark as revoked
+                    await client.db.query(
+                        `UPDATE premium_licenses 
+                         SET status = 'revoked', 
+                             updated_at = NOW() 
+                         WHERE license_key = ?`,
+                        [licenseKey]
+                    );
+                    
+                    await interaction.editReply({ 
+                        content: `✅ Inactive license \`${licenseKey}\` has been revoked.` 
+                    });
+                }
             }
         } catch (error) {
-            console.error(error);
-            await interaction.editReply({ content: 'Error revoking license.' });
+            console.error('Error revoking license:', error);
+            await interaction.editReply({ 
+                content: `❌ Error revoking license: ${error.message}` 
+            });
         }
     }
 };
