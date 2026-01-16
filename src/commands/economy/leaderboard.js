@@ -19,7 +19,6 @@ module.exports = {
         const type = interaction.options.getString('type') || 'server';
         const guildId = interaction.guild.id;
 
-        // Check for global leaderboard (premium feature)
         if (type === 'global') {
             const isPremium = await client.premiumManager.hasFeature(
                 guildId,
