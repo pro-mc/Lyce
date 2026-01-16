@@ -97,6 +97,41 @@ class PremiumManager {
         }
     }
 
+    async ensureServerSettings(guildId) {
+        try {
+            // Check if db exists and is properly connected
+            if (!this.client.db || !this.client.db.query) {
+                console.error('Database not initialized in ensureServerSettings');
+                return;
+            }
+    
+            // Direct query without destructuring - db.query() returns rows directly
+            const rows = await this.client.db.query(
+                'SELECT 1 FROM server_settings WHERE guild_id = ?',
+                [guildId]
+            );
+            
+            // Check if rows is an array and has length
+            if (!rows || (Array.isArray(rows) && rows.length === 0)) {
+                await this.client.db.query(
+                    'INSERT INTO server_settings (guild_id, prefix) VALUES (?, ?)',
+                    [guildId, '/']
+                );
+                console.log(`Created server settings for guild ${guildId}`);
+            } else if (!Array.isArray(rows)) {
+                // If rows is not an array (e.g., it's an object or undefined)
+                await this.client.db.query(
+                    'INSERT INTO server_settings (guild_id, prefix) VALUES (?, ?)',
+                    [guildId, '/']
+                );
+                console.log(`Created server settings for guild ${guildId} (rows was not array)`);
+            }
+        } catch (error) {
+            console.error('Error ensuring server settings:', error);
+            // Don't throw - we want to continue even if this fails
+        }
+    }
+
     // Revoke premium for a guild
     async revokePremium(guildId, reason = 'manual') {
         try {
