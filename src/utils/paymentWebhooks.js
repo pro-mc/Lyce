@@ -52,12 +52,10 @@ class PaymentWebhooks {
             throw new Error('Missing metadata in session');
         }
 
-        // Create and activate license
         const license = await this.client.premiumManager.createLicense(tier, discordUserId);
         const result = await this.client.premiumManager.activateLicense(guildId, license.licenseKey, discordUserId);
 
         if (result.success) {
-            // Record payment
             await this.client.db.query(
                 `INSERT INTO payments 
                  (id, user_id, license_id, amount, currency, provider, provider_payment_id, status) 
@@ -72,7 +70,6 @@ class PaymentWebhooks {
                 ]
             );
 
-            // Notify user
             try {
                 const user = await this.client.users.fetch(discordUserId);
                 await user.send({
@@ -95,7 +92,6 @@ class PaymentWebhooks {
     }
 
     async handleSubscriptionCanceled(subscription) {
-        // Handle subscription cancellation
         const metadata = subscription.metadata;
         if (metadata && metadata.license_key) {
             const licenseInfo = await this.client.premiumManager.getLicenseInfo(metadata.license_key);
@@ -106,10 +102,7 @@ class PaymentWebhooks {
     }
 
     async handlePaymentFailed(invoice) {
-        // Notify user of failed payment
         const customerId = invoice.customer;
-        // You would need to retrieve the Discord user ID from your database
-        // based on the Stripe customer ID
     }
 }
 
