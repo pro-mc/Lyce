@@ -27,5 +27,7 @@ module.exports = {
         workCooldown: 3600000,
         dailyCooldown: 86400000,
         begCooldown: 30000
-    }
+    },
+    // Add owner ID to config
+    ownerId: process.env.OWNER_ID || '1240540042926096406'
 };
