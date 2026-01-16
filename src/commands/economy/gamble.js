@@ -28,7 +28,6 @@ module.exports = {
         const amount = interaction.options.getInteger('amount');
         const game = interaction.options.getString('game');
 
-        // Check premium
         const isPremium = await client.premiumManager.hasFeature(
             guildId,
             'premium_economy_activities'
@@ -50,7 +49,6 @@ module.exports = {
             });
         }
 
-        // Check user balance
         await client.db.createUser(userId, interaction.user.username, interaction.user.discriminator);
         const user = await client.db.getUser(userId);
         
@@ -67,15 +65,14 @@ module.exports = {
             });
         }
 
-        // Game logic
         let result, winnings = 0, gameName;
-        const winChance = 0.4; // 40% chance to win
+        const winChance = 0.4;
 
         switch (game) {
             case 'slots':
                 gameName = '🎰 Slots';
                 if (Math.random() < winChance) {
-                    winnings = amount * 2.5; // 2.5x payout
+                    winnings = amount * 2.5;
                     result = 'JACKPOT!';
                 } else {
                     winnings = 0;
@@ -89,7 +86,7 @@ module.exports = {
                 const houseRoll = Math.floor(Math.random() * 6) + 1;
                 
                 if (playerRoll > houseRoll) {
-                    winnings = amount * 2; // 2x payout
+                    winnings = amount * 2;
                     result = `You rolled ${playerRoll} vs ${houseRoll}`;
                 } else {
                     winnings = 0;
@@ -99,10 +96,10 @@ module.exports = {
 
             case 'blackjack':
                 gameName = '🃏 Blackjack';
-                if (Math.random() < 0.3) { // 30% chance for blackjack
-                    winnings = amount * 3; // 3x payout for blackjack
+                if (Math.random() < 0.3) {
+                    winnings = amount * 3;
                     result = 'BLACKJACK!';
-                } else if (Math.random() < 0.5) { // 50% chance to win
+                } else if (Math.random() < 0.5) {
                     winnings = amount * 2;
                     result = 'You win!';
                 } else {
@@ -115,10 +112,10 @@ module.exports = {
                 gameName = '🎯 Roulette';
                 const number = Math.floor(Math.random() * 37);
                 if (number === 0) {
-                    winnings = amount * 36; // 36x for 0
+                    winnings = amount * 36;
                     result = `Landed on 0!`;
                 } else if (number % 2 === 0) {
-                    winnings = amount * 2; // 2x for even
+                    winnings = amount * 2;
                     result = `Landed on ${number} (Even)`;
                 } else {
                     winnings = 0;
@@ -127,14 +124,11 @@ module.exports = {
                 break;
         }
 
-        // Calculate net gain/loss
         const netChange = winnings - amount;
         const newBalance = (user.balance || 0) + netChange;
 
-        // Update database
         await client.db.updateBalance(userId, netChange);
 
-        // Create result embed
         const embed = {
             color: netChange >= 0 ? 0x00ff00 : 0xff0000,
             title: netChange >= 0 ? '💰 You Won!' : '💸 You Lost',
@@ -148,7 +142,6 @@ module.exports = {
             timestamp: new Date()
         };
 
-        // Add play again button for winners
         const row = new ActionRowBuilder();
         
         if (netChange > 0) {
@@ -176,7 +169,6 @@ module.exports = {
             components: netChange !== 0 ? [row] : [] 
         });
 
-        // Handle button interactions
         const filter = i => i.user.id === userId;
         const collector = interaction.channel.createMessageComponentCollector({ 
             filter, 
@@ -186,7 +178,6 @@ module.exports = {
         collector.on('collect', async i => {
             if (i.customId === 'gamble_again') {
                 await i.deferUpdate();
-                // Could implement auto-play same bet
                 embed.fields.push({ 
                     name: 'Auto-play', 
                     value: 'Feature coming soon! Use /gamble again.' 
