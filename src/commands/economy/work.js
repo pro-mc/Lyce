@@ -27,7 +27,6 @@ module.exports = {
         const user = await client.db.getUser(userId);
         const now = Date.now();
         
-        // Check cooldown
         if (user.last_work) {
             const lastWork = new Date(user.last_work).getTime();
             const cooldown = client.config.features.workCooldown;
@@ -48,7 +47,6 @@ module.exports = {
             }
         }
 
-        // Check if premium job selected
         if (selectedJob !== 'basic') {
             const isPremium = await client.premiumManager.hasFeature(
                 guildId,
@@ -70,7 +68,6 @@ module.exports = {
             }
         }
 
-        // Determine earnings based on job and premium
         const isPremium = await client.premiumManager.hasFeature(
             guildId,
             'premium_economy_activities'
@@ -89,29 +86,25 @@ module.exports = {
             const job = premiumJobs[selectedJob] || premiumJobs.basic;
             jobName = job.name;
             baseEarnings = Math.floor(Math.random() * (job.max - job.min + 1)) + job.min;
-            cooldownReduction = 0.5; // 50% shorter cooldown for premium
+            cooldownReduction = 0.5;
         } else {
             jobName = 'Basic Job';
-            baseEarnings = Math.floor(Math.random() * 41) + 10; // 10-50 coins
+            baseEarnings = Math.floor(Math.random() * 41) + 10;
         }
 
-        // Apply streak bonus
         const streak = user.daily_streak || 0;
-        const streakBonus = Math.floor(streak / 7) * 5; // 5 coins per week of streak
+        const streakBonus = Math.floor(streak / 7) * 5;
         
-        // Apply premium bonus
-        const premiumBonus = isPremium ? Math.floor(baseEarnings * 0.25) : 0; // 25% bonus
+        const premiumBonus = isPremium ? Math.floor(baseEarnings * 0.25) : 0;
         
         const totalEarnings = baseEarnings + streakBonus + premiumBonus;
 
-        // Update user
         await client.db.updateBalance(userId, totalEarnings);
         await client.db.query(
             'UPDATE users SET last_work = NOW() WHERE id = ?',
             [userId]
         );
 
-        // Build embed
         const embed = {
             color: isPremium ? 0x00ff00 : client.config.bot.color,
             title: isPremium ? '💼 Premium Job Complete!' : '💼 Work Complete',
