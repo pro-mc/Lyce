@@ -19,7 +19,7 @@ module.exports = {
         if (interaction.user.id !== config.ownerId) {
             return interaction.reply({ 
                 content: '❌ This command is restricted to the bot owner.', 
-                flags: 64 // Fixed: Use flags instead of ephemeral
+                flags: 64 
             });
         }
 
