@@ -208,7 +208,28 @@ class PremiumManager {
         }
     }
 
-    // Activate a license
+    // NEW METHOD: Ensure server settings exist for a guild
+    async ensureServerSettings(guildId) {
+        try {
+            const [rows] = await this.client.db.query(
+                'SELECT 1 FROM server_settings WHERE guild_id = ?',
+                [guildId]
+            );
+            
+            if (rows.length === 0) {
+                await this.client.db.query(
+                    'INSERT INTO server_settings (guild_id, prefix) VALUES (?, ?)',
+                    [guildId, '/']
+                );
+                console.log(`Created server settings for guild ${guildId}`);
+            }
+        } catch (error) {
+            console.error('Error ensuring server settings:', error);
+            // Don't throw - we want to continue even if this fails
+        }
+    }
+
+    // Activate a license (UPDATED to include ensureServerSettings)
     async activateLicense(guildId, licenseKey, activatorId) {
         try {
             // Verify guild exists
@@ -273,6 +294,9 @@ class PremiumManager {
                 expiresAt = new Date(Date.now() + tierData.duration * 24 * 60 * 60 * 1000);
             }
 
+            // NEW: Ensure server settings exist before transaction
+            await this.ensureServerSettings(guildId);
+
             // Begin transaction
             const connection = await this.client.db.pool.getConnection();
             await connection.beginTransaction();
@@ -330,7 +354,7 @@ class PremiumManager {
         }
     }
 
-    // ========== ADD THESE MISSING METHODS ==========
+    // ========== MISSING METHODS ==========
 
     // Get license information
     async getLicenseInfo(licenseKey) {
