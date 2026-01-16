@@ -86,6 +86,43 @@ class Database {
             )`
         ];
 
+        `CREATE TABLE IF NOT EXISTS premium_licenses (
+            id VARCHAR(50) PRIMARY KEY,
+            license_key VARCHAR(100) UNIQUE,
+            tier ENUM('monthly', 'lifetime', 'yearly') NOT NULL,
+            status ENUM('active', 'inactive', 'revoked', 'expired') DEFAULT 'inactive',
+            purchaser_discord_id VARCHAR(255),
+            activated_guild_id VARCHAR(255),
+            activated_at TIMESTAMP NULL,
+            expires_at TIMESTAMP NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        )`,
+
+        `CREATE TABLE IF NOT EXISTS payments (
+            id VARCHAR(50) PRIMARY KEY,
+            user_id VARCHAR(255),
+            license_id VARCHAR(50),
+            amount DECIMAL(10, 2),
+            currency VARCHAR(10),
+            provider VARCHAR(50),
+            provider_payment_id VARCHAR(255),
+            status ENUM('pending', 'completed', 'failed', 'refunded'),
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (license_id) REFERENCES premium_licenses(id) ON DELETE SET NULL
+        )`,
+
+        `CREATE TABLE IF NOT EXISTS premium_features (
+            guild_id VARCHAR(255) PRIMARY KEY,
+            is_premium BOOLEAN DEFAULT false,
+            premium_tier VARCHAR(50),
+            features JSON,
+            expires_at TIMESTAMP NULL,
+            activated_at TIMESTAMP NULL,
+            FOREIGN KEY (guild_id) REFERENCES server_settings(guild_id) ON DELETE CASCADE
+        )`
+    ];
+
         for (const tableQuery of tables) {
             await this.pool.execute(tableQuery);
         }
