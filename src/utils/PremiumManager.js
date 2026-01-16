@@ -1,4 +1,3 @@
-// src/utils/PremiumManager.js
 const crypto = require('crypto');
 const config = require('../../config/config');
 const { v4: uuidv4 } = require('uuid');
@@ -62,6 +61,7 @@ class PremiumManager {
         };
     }
 
+    // Generate license key
     generateLicenseKey(tier) {
         const prefix = tier.slice(0, 3).toUpperCase();
         const timestamp = Date.now().toString(36).toUpperCase();
@@ -69,6 +69,7 @@ class PremiumManager {
         return `LYCE-${prefix}-${timestamp}-${random}`;
     }
 
+    // Check for expired subscriptions
     async checkExpirations() {
         console.log('🔍 Checking for expired premium subscriptions...');
         
@@ -96,6 +97,7 @@ class PremiumManager {
         }
     }
 
+    // Revoke premium for a guild
     async revokePremium(guildId, reason = 'manual') {
         try {
             // Deactivate license
@@ -123,6 +125,7 @@ class PremiumManager {
         }
     }
 
+    // Check guild premium status
     async checkGuildPremium(guildId) {
         try {
             const [premium] = await this.client.db.query(
@@ -162,94 +165,7 @@ class PremiumManager {
         }
     }
 
-    async getLicenseInfo(licenseKey) {
-        try {
-            const [rows] = await this.client.db.query(
-                'SELECT * FROM premium_licenses WHERE license_key = ?',
-                [licenseKey]
-            );
-            return rows[0] || null;
-        } catch (error) {
-            console.error('Error getting license info:', error);
-            return null;
-        }
-    }
-    
-    // Add getLicenseByGuildId method
-    async getLicenseByGuildId(guildId) {
-        try {
-            const [rows] = await this.client.db.query(
-                'SELECT * FROM premium_licenses WHERE activated_guild_id = ? AND status = "active"',
-                [guildId]
-            );
-            return rows[0] || null;
-        } catch (error) {
-            console.error('Error getting license by guild ID:', error);
-            return null;
-        }
-    }
-    
-    // Add revokeLicense method (if not exists)
-    async revokeLicense(guildId) {
-        return await this.revokePremium(guildId, 'manual');
-    }
-    
-    // Add getAllLicenses method (optional, for listing)
-    async getAllLicenses(status = null) {
-        try {
-            let query = 'SELECT * FROM premium_licenses';
-            const params = [];
-            
-            if (status) {
-                query += ' WHERE status = ?';
-                params.push(status);
-            }
-            
-            query += ' ORDER BY created_at DESC';
-            const [rows] = await this.client.db.query(query, params);
-            return rows;
-        } catch (error) {
-            console.error('Error getting all licenses:', error);
-            return [];
-        }
-    }
-    
-    async checkPremiumStatus(guildId) {
-        try {
-            // Use checkGuildPremium which already exists
-            const result = await this.checkGuildPremium(guildId);
-            
-            if (result.isPremium) {
-                return {
-                    isPremium: true,
-                    tier: result.tier,
-                    tierName: result.tierName,
-                    features: result.features || [],
-                    activatedAt: result.activatedAt,
-                    expiresAt: result.expiresAt,
-                    licenseKey: result.licenseKey
-                };
-            } else {
-                return {
-                    isPremium: false,
-                    tier: 'free',
-                    features: [],
-                    activatedAt: null,
-                    expiresAt: null
-                };
-            }
-        } catch (error) {
-            console.error('Error in checkPremiumStatus:', error);
-            return {
-                isPremium: false,
-                tier: 'free',
-                features: [],
-                activatedAt: null,
-                expiresAt: null
-            };
-        }
-    }
-
+    // Check if guild has specific feature
     async hasFeature(guildId, featureName) {
         const premium = await this.checkGuildPremium(guildId);
         if (!premium.isPremium) return false;
@@ -257,6 +173,7 @@ class PremiumManager {
         return premium.features.includes(featureName);
     }
 
+    // Create a new license
     async createLicense(tier, purchaserId = null, adminNote = '') {
         try {
             const licenseKey = this.generateLicenseKey(tier);
@@ -291,6 +208,7 @@ class PremiumManager {
         }
     }
 
+    // Activate a license
     async activateLicense(guildId, licenseKey, activatorId) {
         try {
             // Verify guild exists
@@ -409,6 +327,126 @@ class PremiumManager {
                 success: false, 
                 message: 'Failed to activate license. Please try again or contact support.' 
             };
+        }
+    }
+
+    // ========== ADD THESE MISSING METHODS ==========
+
+    // Get license information
+    async getLicenseInfo(licenseKey) {
+        try {
+            const [rows] = await this.client.db.query(
+                'SELECT * FROM premium_licenses WHERE license_key = ?',
+                [licenseKey]
+            );
+            return rows[0] || null;
+        } catch (error) {
+            console.error('Error getting license info:', error);
+            return null;
+        }
+    }
+
+    // Get license by guild ID
+    async getLicenseByGuildId(guildId) {
+        try {
+            const [rows] = await this.client.db.query(
+                'SELECT * FROM premium_licenses WHERE activated_guild_id = ? AND status = "active"',
+                [guildId]
+            );
+            return rows[0] || null;
+        } catch (error) {
+            console.error('Error getting license by guild ID:', error);
+            return null;
+        }
+    }
+
+    // Revoke license (alias for revokePremium)
+    async revokeLicense(guildId) {
+        return await this.revokePremium(guildId, 'manual');
+    }
+
+    // Check premium status (for premium.js command)
+    async checkPremiumStatus(guildId) {
+        try {
+            const result = await this.checkGuildPremium(guildId);
+            
+            if (result.isPremium) {
+                return {
+                    isPremium: true,
+                    tier: result.tier,
+                    tierName: result.tierName,
+                    features: result.features || [],
+                    activatedAt: result.activatedAt,
+                    expiresAt: result.expiresAt,
+                    licenseKey: result.licenseKey
+                };
+            } else {
+                return {
+                    isPremium: false,
+                    tier: 'free',
+                    features: [],
+                    activatedAt: null,
+                    expiresAt: null
+                };
+            }
+        } catch (error) {
+            console.error('Error in checkPremiumStatus:', error);
+            return {
+                isPremium: false,
+                tier: 'free',
+                features: [],
+                activatedAt: null,
+                expiresAt: null
+            };
+        }
+    }
+
+    // Get all licenses (optional, for admin panel)
+    async getAllLicenses(status = null) {
+        try {
+            let query = 'SELECT * FROM premium_licenses';
+            const params = [];
+            
+            if (status) {
+                query += ' WHERE status = ?';
+                params.push(status);
+            }
+            
+            query += ' ORDER BY created_at DESC';
+            const [rows] = await this.client.db.query(query, params);
+            return rows;
+        } catch (error) {
+            console.error('Error getting all licenses:', error);
+            return [];
+        }
+    }
+
+    // Update license information
+    async updateLicense(licenseKey, updates) {
+        try {
+            const setClauses = [];
+            const values = [];
+            
+            for (const [key, value] of Object.entries(updates)) {
+                setClauses.push(`${key} = ?`);
+                values.push(value);
+            }
+            
+            if (setClauses.length === 0) {
+                return { success: false, message: 'No updates provided' };
+            }
+            
+            values.push(licenseKey);
+            
+            await this.client.db.query(
+                `UPDATE premium_licenses SET ${setClauses.join(', ')}, updated_at = NOW() WHERE license_key = ?`,
+                values
+            );
+            
+            return { success: true, message: 'License updated successfully' };
+        } catch (error) {
+            console.error('Error updating license:', error);
+            return { success: false, message: 'Failed to update license' };
         }
     }
 }
