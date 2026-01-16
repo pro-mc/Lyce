@@ -21,6 +21,7 @@ class Database {
             console.log('Database initialized successfully');
         } catch (error) {
             console.error('Database initialization failed:', error);
+            throw error;
         }
     }
 
@@ -123,7 +124,12 @@ class Database {
         ];
 
         for (const tableQuery of tables) {
-            await this.pool.execute(tableQuery);
+            try {
+                await this.pool.execute(tableQuery);
+            } catch (error) {
+                console.error(`Error creating table: ${error.message}`);
+                // Continue with other tables even if one fails
+            }
         }
     }
 
@@ -156,20 +162,6 @@ class Database {
         await this.pool.execute(
             'UPDATE users SET balance = balance + ? WHERE id = ?',
             [amount, userId]
-        );
-    }
-
-    async addInfraction(infractionId, userId, moderatorId, type, reason, duration = null) {
-        await this.pool.execute(
-            'INSERT INTO infractions (id, user_id, moderator_id, type, reason, duration, expires_at) VALUES (?, ?, ?, ?, ?, ?, DATE_ADD(NOW(), INTERVAL ? SECOND))',
-            [infractionId, userId, moderatorId, type, reason, duration, duration]
-        );
-    }
-
-    async getInfractions(userId) {
-        return await this.query(
-            'SELECT * FROM infractions WHERE user_id = ? ORDER BY created_at DESC',
-            [userId]
         );
     }
 }
