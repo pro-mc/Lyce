@@ -61,7 +61,6 @@ class PremiumManager {
         };
     }
 
-    // Generate license key
     generateLicenseKey(tier) {
         const prefix = tier.slice(0, 3).toUpperCase();
         const timestamp = Date.now().toString(36).toUpperCase();
@@ -69,7 +68,6 @@ class PremiumManager {
         return `LYCE-${prefix}-${timestamp}-${random}`;
     }
 
-    // Check for expired subscriptions
     async checkExpirations() {
         console.log('🔍 Checking for expired premium subscriptions...');
         
@@ -97,10 +95,8 @@ class PremiumManager {
         }
     }
 
-    // Revoke premium for a guild
     async revokePremium(guildId, reason = 'manual') {
         try {
-            // Deactivate license
             await this.client.db.query(
                 `UPDATE premium_licenses 
                  SET status = ? 
@@ -108,7 +104,6 @@ class PremiumManager {
                 [reason === 'expired' ? 'expired' : 'revoked', guildId]
             );
 
-            // Remove premium features
             await this.client.db.query(
                 `UPDATE premium_features 
                  SET is_premium = 0, expires_at = NOW() 
@@ -125,7 +120,6 @@ class PremiumManager {
         }
     }
 
-    // Check guild premium status
     async checkGuildPremium(guildId) {
         try {
             const premium = await this.client.db.query(
@@ -136,7 +130,6 @@ class PremiumManager {
                 [guildId]
             );
 
-            // Note: db.query returns an array, so we need to get the first element
             if (!premium || premium.length === 0) {
                 return { 
                     isPremium: false,
@@ -147,7 +140,6 @@ class PremiumManager {
 
             const premiumData = premium[0];
 
-            // Check expiration
             if (premiumData.expires_at && new Date(premiumData.expires_at) < new Date()) {
                 await this.revokePremium(guildId, 'expired');
                 return { isPremium: false, expired: true };
@@ -168,22 +160,18 @@ class PremiumManager {
         }
     }
 
-    // NEW METHOD: Ensure server settings exist for a guild (FIXED VERSION)
     async ensureServerSettings(guildId) {
         try {
-            // Check if db exists
             if (!this.client.db || typeof this.client.db.query !== 'function') {
                 console.error('Database not available in ensureServerSettings');
                 return;
             }
 
-            // db.query() returns rows directly (array), no destructuring needed
             const rows = await this.client.db.query(
                 'SELECT 1 FROM server_settings WHERE guild_id = ?',
                 [guildId]
             );
             
-            // rows is an array, check its length
             if (!rows || rows.length === 0) {
                 await this.client.db.query(
                     'INSERT INTO server_settings (guild_id, prefix) VALUES (?, ?)',
@@ -193,11 +181,9 @@ class PremiumManager {
             }
         } catch (error) {
             console.error('Error ensuring server settings:', error);
-            // Don't throw - we want to continue even if this fails
         }
     }
 
-    // Check if guild has specific feature
     async hasFeature(guildId, featureName) {
         const premium = await this.checkGuildPremium(guildId);
         if (!premium.isPremium) return false;
@@ -205,7 +191,6 @@ class PremiumManager {
         return premium.features.includes(featureName);
     }
 
-    // Create a new license
     async createLicense(tier, purchaserId = null, adminNote = '') {
         try {
             const licenseKey = this.generateLicenseKey(tier);
@@ -240,10 +225,8 @@ class PremiumManager {
         }
     }
 
-    // Activate a license (UPDATED to include ensureServerSettings)
     async activateLicense(guildId, licenseKey, activatorId) {
         try {
-            // Verify guild exists
             const guild = this.client.guilds.cache.get(guildId);
             if (!guild) {
                 return { success: false, message: 'Guild not found.' };
@@ -257,7 +240,6 @@ class PremiumManager {
                 };
             }
 
-            // Check if guild already has active premium
             const existing = await this.client.db.query(
                 `SELECT * FROM premium_features 
                  WHERE guild_id = ? AND is_premium = 1 
@@ -276,7 +258,6 @@ class PremiumManager {
                 };
             }
 
-            // Get and validate license
             const licenseResult = await this.client.db.query(
                 `SELECT * FROM premium_licenses 
                  WHERE license_key = ? AND status = 'inactive'`,
@@ -292,7 +273,6 @@ class PremiumManager {
 
             const license = licenseResult[0];
 
-            // Check expiration for non-lifetime
             if (license.expires_at && new Date(license.expires_at) < new Date()) {
                 await this.client.db.query(
                     `UPDATE premium_licenses SET status = 'expired' WHERE id = ?`,
@@ -301,22 +281,18 @@ class PremiumManager {
                 return { success: false, message: 'This license has expired.' };
             }
 
-            // Calculate expiration
             const tierData = this.features[license.tier];
             let expiresAt = license.expires_at;
             if (!expiresAt && license.tier !== 'lifetime') {
                 expiresAt = new Date(Date.now() + tierData.duration * 24 * 60 * 60 * 1000);
             }
 
-            // Ensure server settings exist before transaction
             await this.ensureServerSettings(guildId);
 
-            // Begin transaction
             const connection = await this.client.db.pool.getConnection();
             await connection.beginTransaction();
 
             try {
-                // Update license
                 await connection.query(
                     `UPDATE premium_licenses 
                      SET status = 'active', activated_guild_id = ?, activated_at = NOW() 
@@ -324,7 +300,6 @@ class PremiumManager {
                     [guildId, license.id]
                 );
 
-                // Create/update premium features
                 await connection.query(
                     `INSERT INTO premium_features 
                      (guild_id, is_premium, premium_tier, features, expires_at, activated_at) 
@@ -368,9 +343,6 @@ class PremiumManager {
         }
     }
 
-    // ========== OTHER METHODS ==========
-
-    // Get license information
     async getLicenseInfo(licenseKey) {
         try {
             const rows = await this.client.db.query(
@@ -384,7 +356,6 @@ class PremiumManager {
         }
     }
 
-    // Get license by guild ID
     async getLicenseByGuildId(guildId) {
         try {
             const rows = await this.client.db.query(
@@ -398,12 +369,10 @@ class PremiumManager {
         }
     }
 
-    // Revoke license (alias for revokePremium)
     async revokeLicense(guildId) {
         return await this.revokePremium(guildId, 'manual');
     }
 
-    // Check premium status (for premium.js command)
     async checkPremiumStatus(guildId) {
         try {
             const result = await this.checkGuildPremium(guildId);
@@ -439,7 +408,6 @@ class PremiumManager {
         }
     }
 
-    // Get all licenses (optional, for admin panel)
     async getAllLicenses(status = null) {
         try {
             let query = 'SELECT * FROM premium_licenses';
@@ -459,7 +427,6 @@ class PremiumManager {
         }
     }
 
-    // Update license information
     async updateLicense(licenseKey, updates) {
         try {
             const setClauses = [];
