@@ -3,6 +3,7 @@ const config = require('./config/config');
 const db = require('./src/database/db');
 const fs = require('fs');
 const path = require('path');
+const PremiumManager = require('./src/utils/PremiumManager');
 
 class LyceBot extends Client {
     constructor() {
@@ -21,12 +22,18 @@ class LyceBot extends Client {
         this.commands = new Collection();
         this.cooldowns = new Collection();
         this.db = db;
+        this.premiumManager = new PremiumManager(this);
     }
 
     async initialize() {
         await this.db.initialize();
+        await this.premiumManager.checkExpiredLicenses();
         await this.loadCommands();
         await this.loadEvents();
+
+        setInterval(async () => {
+            await this.premiumManager.checkExpiredLicenses();
+        }, 24 * 60 * 60 * 1000);
         
         this.login(this.config.discord.token).then(() => {
             console.log(`${this.config.bot.name} v${this.config.bot.version} is online!`);
