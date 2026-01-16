@@ -162,6 +162,81 @@ class PremiumManager {
         }
     }
 
+    async getLicenseInfo(licenseKey) {
+        try {
+            const [rows] = await this.client.db.query(
+                'SELECT * FROM premium_licenses WHERE license_key = ?',
+                [licenseKey]
+            );
+            return rows[0] || null;
+        } catch (error) {
+            console.error('Error getting license info:', error);
+            return null;
+        }
+    }
+    
+    // Add getLicenseByGuildId method
+    async getLicenseByGuildId(guildId) {
+        try {
+            const [rows] = await this.client.db.query(
+                'SELECT * FROM premium_licenses WHERE activated_guild_id = ? AND status = "active"',
+                [guildId]
+            );
+            return rows[0] || null;
+        } catch (error) {
+            console.error('Error getting license by guild ID:', error);
+            return null;
+        }
+    }
+    
+    // Add revokeLicense method (if not exists)
+    async revokeLicense(guildId) {
+        return await this.revokePremium(guildId, 'manual');
+    }
+    
+    // Add getAllLicenses method (optional, for listing)
+    async getAllLicenses(status = null) {
+        try {
+            let query = 'SELECT * FROM premium_licenses';
+            const params = [];
+            
+            if (status) {
+                query += ' WHERE status = ?';
+                params.push(status);
+            }
+            
+            query += ' ORDER BY created_at DESC';
+            const [rows] = await this.client.db.query(query, params);
+            return rows;
+        } catch (error) {
+            console.error('Error getting all licenses:', error);
+            return [];
+        }
+    }
+    
+    // Update the checkPremiumStatus method to match what your premium command expects
+    async checkPremiumStatus(guildId) {
+        const result = await this.checkGuildPremium(guildId);
+        
+        if (result.isPremium) {
+            return {
+                isPremium: true,
+                tier: result.tier,
+                features: result.features || [],
+                activatedAt: result.activatedAt,
+                expiresAt: result.expiresAt
+            };
+        } else {
+            return {
+                isPremium: false,
+                tier: 'free',
+                features: [],
+                activatedAt: null,
+                expiresAt: null
+            };
+        }
+    }
+
     async hasFeature(guildId, featureName) {
         const premium = await this.checkGuildPremium(guildId);
         if (!premium.isPremium) return false;
