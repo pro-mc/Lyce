@@ -12,7 +12,7 @@ module.exports = {
                 .addChoices(
                     { name: 'Monthly', value: 'monthly' },
                     { name: 'Yearly', value: 'yearly' },
-                    { name: 'Lifetime', value: 'lifetime' }  // Fixed: Added missing {
+                    { name: 'Lifetime', value: 'lifetime' }
                 ))
         .addUserOption(option =>
             option.setName('user')
@@ -20,21 +20,18 @@ module.exports = {
                 .setRequired(false)),
 
     async execute(interaction, client) {
-        // Check if user is owner
         if (interaction.user.id !== config.ownerId) {
             return interaction.reply({ 
                 content: '❌ This command is restricted to the bot owner.', 
-                flags: 64 // Use MessageFlags.Ephemeral
+                flags: 64
             });
         }
 
-        // Defer immediately to prevent timeout
         await interaction.deferReply({ flags: 64 });
 
         const tier = interaction.options.getString('tier');
         const user = interaction.options.getUser('user');
         
-        // Check if premiumManager exists
         if (!client.premiumManager) {
             return interaction.editReply({ 
                 content: '❌ Premium system is not initialized. Please contact the bot administrator.' 
@@ -60,7 +57,6 @@ module.exports = {
 
             await interaction.editReply({ embeds: [embed] });
 
-            // Send license to user if specified
             if (user) {
                 try {
                     await user.send({
