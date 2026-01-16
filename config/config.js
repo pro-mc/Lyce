@@ -15,7 +15,7 @@ module.exports = {
     },
     bot: {
         prefix: process.env.PREFIX || '/',
-        color: parseInt(process.env.BOT_COLOR) || 3447003, // Convert to number
+        color: parseInt(process.env.BOT_COLOR) || 3447003,
         name: process.env.BOT_NAME || "Lyce",
         version: process.env.BOT_VERSION || "2.0.0"
     },
@@ -28,6 +28,5 @@ module.exports = {
         dailyCooldown: 86400000,
         begCooldown: 30000
     },
-    // Add owner ID to config
     ownerId: process.env.OWNER_ID || '1240540042926096406'
 };
