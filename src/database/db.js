@@ -83,7 +83,7 @@ class Database {
                 premium_tier ENUM('monthly', 'lifetime'),
                 purchased_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 expires_at TIMESTAMP NULL
-            )`
+            )`,
 
             `CREATE TABLE IF NOT EXISTS premium_licenses (
                 id VARCHAR(50) PRIMARY KEY,
