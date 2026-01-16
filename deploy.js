@@ -9,12 +9,10 @@ const commandPermissions = [];
 const commandsPath = path.join(__dirname, 'src', 'commands');
 const commandFolders = fs.readdirSync(commandsPath);
 
-// Owner ID
 const OWNER_ID = process.env.OWNER_ID || '1240540042926096406';
 
 console.log('Loading commands...');
 
-// Load all commands
 for (const folder of commandFolders) {
     const folderPath = path.join(commandsPath, folder);
     const commandFiles = fs.readdirSync(folderPath).filter(file => file.endsWith('.js'));
@@ -22,13 +20,12 @@ for (const folder of commandFolders) {
     for (const file of commandFiles) {
         try {
             const filePath = path.join(folderPath, file);
-            delete require.cache[require.resolve(filePath)]; // Clear cache
+            delete require.cache[require.resolve(filePath)];
             const command = require(filePath);
             
             if ('data' in command && 'execute' in command) {
                 commands.push(command.data.toJSON());
                 
-                // Set permissions for admin commands
                 if (folder === 'admin') {
                     commandPermissions.push({
                         commandName: command.data.name,
@@ -64,7 +61,6 @@ const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
     try {
         console.log(`Started refreshing ${commands.length} application (/) commands.`);
 
-        // Register commands globally
         const data = await rest.put(
             Routes.applicationCommands(process.env.CLIENT_ID),
             { body: commands },
@@ -72,7 +68,6 @@ const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
 
         console.log(`Successfully registered ${data.length} commands globally.`);
 
-        // If you want to set permissions in specific guilds
         if (process.env.GUILD_ID) {
             const guildId = process.env.GUILD_ID;
             const commands = await rest.get(
