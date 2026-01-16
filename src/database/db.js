@@ -95,7 +95,7 @@ class Database {
                 activated_guild_id VARCHAR(255),
                 activated_at TIMESTAMP NULL,
                 expires_at TIMESTAMP NULL,
-                admin_note TEXT,  // Add this line
+                admin_note TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
             )`,
