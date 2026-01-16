@@ -18,6 +18,7 @@ class Database {
     async initialize() {
         try {
             await this.createTables();
+            await this.fixTables(); // Add this to fix existing tables
             console.log("Database initialized successfully");
         } catch (error) {
             console.error("Database initialization failed:", error);
@@ -93,20 +94,6 @@ class Database {
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
             )`,
 
-            `CREATE TABLE IF NOT EXISTS premium_licenses (
-                id VARCHAR(50) PRIMARY KEY,
-                license_key VARCHAR(100) UNIQUE,
-                tier ENUM('monthly', 'lifetime', 'yearly') NOT NULL,
-                status ENUM('active', 'inactive', 'revoked', 'expired') DEFAULT 'inactive',
-                purchaser_discord_id VARCHAR(255),
-                activated_guild_id VARCHAR(255),
-                activated_at TIMESTAMP NULL,
-                expires_at TIMESTAMP NULL,
-                admin_note TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-            )`,
-
             `CREATE TABLE IF NOT EXISTS payments (
                 id VARCHAR(50) PRIMARY KEY,
                 user_id VARCHAR(255),
@@ -126,8 +113,8 @@ class Database {
                 premium_tier VARCHAR(50),
                 features JSON,
                 expires_at TIMESTAMP NULL,
-                activated_at TIMESTAMP NULL,
-            )`,
+                activated_at TIMESTAMP NULL
+            )` // REMOVED the trailing comma
         ];
 
         for (const tableQuery of tables) {
@@ -135,20 +122,82 @@ class Database {
                 await this.pool.execute(tableQuery);
             } catch (error) {
                 console.error(`Error creating table: ${error.message}`);
-                // Continue with other tables even if one fails
             }
         }
 
+        // Add missing columns if needed
+        await this.addMissingColumns();
+    }
+
+    async addMissingColumns() {
         try {
-            await this.pool.execute(`
-                ALTER TABLE premium_licenses 
-                ADD COLUMN IF NOT EXISTS admin_note TEXT
-            `);
+            // Check and add admin_note if missing
+            const [columns] = await this.pool.execute(`
+                SELECT COLUMN_NAME 
+                FROM INFORMATION_SCHEMA.COLUMNS 
+                WHERE TABLE_SCHEMA = ? 
+                AND TABLE_NAME = 'premium_licenses' 
+                AND COLUMN_NAME = 'admin_note'
+            `, [config.database.name]);
+            
+            if (columns.length === 0) {
+                await this.pool.execute(`
+                    ALTER TABLE premium_licenses 
+                    ADD COLUMN admin_note TEXT
+                `);
+                console.log('✓ Added admin_note column to premium_licenses table');
+            }
         } catch (error) {
-            console.log(
-                "Note: admin_note column may already exist or error:",
-                error.message,
-            );
+            console.log('Note: admin_note column may already exist or error:', error.message);
+        }
+    }
+
+    async fixTables() {
+        try {
+            // Remove foreign key constraint if it exists
+            console.log('Checking for foreign key constraints...');
+            
+            const [constraints] = await this.pool.execute(`
+                SELECT CONSTRAINT_NAME
+                FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS
+                WHERE TABLE_SCHEMA = ?
+                AND TABLE_NAME = 'premium_features'
+                AND CONSTRAINT_TYPE = 'FOREIGN KEY'
+            `, [config.database.name]);
+            
+            for (const constraint of constraints) {
+                try {
+                    await this.pool.execute(`
+                        ALTER TABLE premium_features 
+                        DROP FOREIGN KEY ${constraint.CONSTRAINT_NAME}
+                    `);
+                    console.log(`✓ Removed foreign key constraint: ${constraint.CONSTRAINT_NAME}`);
+                } catch (error) {
+                    console.log(`Note: Could not remove constraint ${constraint.CONSTRAINT_NAME}:`, error.message);
+                }
+            }
+            
+            // Ensure server_settings entry exists for all guilds that have premium
+            const [premiumGuilds] = await this.pool.execute(`
+                SELECT DISTINCT guild_id 
+                FROM premium_features 
+                WHERE guild_id NOT IN (SELECT guild_id FROM server_settings)
+            `);
+            
+            for (const row of premiumGuilds) {
+                try {
+                    await this.pool.execute(
+                        'INSERT INTO server_settings (guild_id, prefix) VALUES (?, ?)',
+                        [row.guild_id, '/']
+                    );
+                    console.log(`✓ Added server settings for guild ${row.guild_id}`);
+                } catch (error) {
+                    console.log(`Note: Could not add server settings for guild ${row.guild_id}:`, error.message);
+                }
+            }
+            
+        } catch (error) {
+            console.log('Error fixing tables:', error.message);
         }
     }
 
