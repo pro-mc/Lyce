@@ -38,7 +38,6 @@ module.exports = {
         const includePinned = interaction.options.getBoolean('pinned') || false;
         const guildId = interaction.guild.id;
 
-        // Check premium status for advanced features
         const isPremium = await client.premiumManager.hasFeature(
             guildId,
             'bulk_purge_50000'
@@ -47,7 +46,6 @@ module.exports = {
         const maxFreeAmount = client.config.features.maxFreePurge;
         const maxPremiumAmount = client.config.features.premiumPurgeLimit;
 
-        // Check premium-only features
         const hasAdvancedFilters = contains || startsWith || includePinned;
         if (hasAdvancedFilters && !isPremium) {
             return interaction.editReply({
@@ -65,7 +63,6 @@ module.exports = {
             });
         }
 
-        // Check amount limits
         if (!isPremium && amount > maxFreeAmount) {
             return interaction.editReply({
                 embeds: [{
@@ -87,23 +84,18 @@ module.exports = {
             let deletedCount = 0;
             
             if (hasAdvancedFilters && isPremium) {
-                // Premium filtering logic
                 const messages = await interaction.channel.messages.fetch({ limit: 100 });
                 let toDelete = [];
                 
                 for (const [id, msg] of messages) {
                     if (toDelete.length >= actualMax) break;
                     
-                    // User filter
                     if (user && msg.author.id !== user.id) continue;
                     
-                    // Contains filter
                     if (contains && !msg.content.includes(contains)) continue;
                     
-                    // Starts with filter
                     if (startsWith && !msg.content.startsWith(startsWith)) continue;
                     
-                    // Pinned filter
                     if (!includePinned && msg.pinned) continue;
                     
                     toDelete.push(msg);
@@ -114,7 +106,6 @@ module.exports = {
                     deletedCount = deleted.size;
                 }
             } else if (user) {
-                // Delete by user
                 const messages = await interaction.channel.messages.fetch({ limit: 100 });
                 const userMessages = messages.filter(m => m.author.id === user.id).first(actualMax);
                 
@@ -123,7 +114,6 @@ module.exports = {
                     deletedCount = deleted.size;
                 }
             } else {
-                // Standard bulk delete
                 const deleted = await interaction.channel.bulkDelete(actualMax, true);
                 deletedCount = deleted.size;
             }
@@ -155,7 +145,6 @@ module.exports = {
 
             const reply = await interaction.editReply({ embeds: [embed] });
             
-            // Auto-delete success message after 5 seconds
             setTimeout(() => {
                 reply.delete().catch(() => {});
             }, 5000);
