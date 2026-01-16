@@ -31,7 +31,6 @@ class LyceBot extends Client {
         await this.db.initialize();
         console.log('Database initialized');
         
-        // Initialize premium manager and check for expired licenses
         if (this.premiumManager.checkExpirations) {
             await this.premiumManager.checkExpirations();
             console.log('Checked for expired licenses');
@@ -42,7 +41,6 @@ class LyceBot extends Client {
         await this.loadCommands();
         await this.loadEvents();
         
-        // Set up interval for checking expired licenses (every hour)
         setInterval(async () => {
             if (this.premiumManager.checkExpirations) {
                 const expiredCount = await this.premiumManager.checkExpirations();
@@ -50,16 +48,15 @@ class LyceBot extends Client {
                     console.log(`Auto-revoked ${expiredCount} expired licenses`);
                 }
             }
-        }, 60 * 60 * 1000); // Every hour
+        }, 60 * 60 * 1000);
         
         this.login(this.config.discord.token).then(() => {
             console.log(`${this.config.bot.name} v${this.config.bot.version} is online!`);
             console.log(`Logged in as ${this.user.tag}`);
             
-            // Set bot activity
             this.user.setActivity({
                 name: `/help | ${this.guilds.cache.size} servers`,
-                type: 3 // WATCHING
+                type: 3
             });
             
         }).catch(console.error);
@@ -68,7 +65,6 @@ class LyceBot extends Client {
     async loadCommands() {
         const commandsPath = path.join(__dirname, 'src', 'commands');
         
-        // Check if commands directory exists
         if (!fs.existsSync(commandsPath)) {
             console.error('Commands directory does not exist!');
             return;
@@ -79,7 +75,6 @@ class LyceBot extends Client {
         for (const folder of commandFolders) {
             const folderPath = path.join(commandsPath, folder);
             
-            // Check if it's a directory
             if (!fs.statSync(folderPath).isDirectory()) continue;
             
             const commandFiles = fs.readdirSync(folderPath).filter(file => file.endsWith('.js'));
@@ -105,7 +100,6 @@ class LyceBot extends Client {
     async loadEvents() {
         const eventsPath = path.join(__dirname, 'src', 'events');
         
-        // Check if events directory exists
         if (!fs.existsSync(eventsPath)) {
             console.error('Events directory does not exist!');
             return;
@@ -134,7 +128,6 @@ class LyceBot extends Client {
 
 const bot = new LyceBot();
 
-// Handle graceful shutdown
 process.on('unhandledRejection', error => {
     console.error('Unhandled promise rejection:', error);
 });
@@ -143,13 +136,11 @@ process.on('SIGINT', async () => {
     console.log('\nShutting down gracefully...');
     
     try {
-        // Clean up database connections
         if (bot.db && bot.db.pool) {
             await bot.db.pool.end();
             console.log('Database connection closed');
         }
         
-        // Destroy Discord client
         if (bot.destroy) {
             bot.destroy();
             console.log('Discord client destroyed');
@@ -182,11 +173,9 @@ process.on('SIGTERM', async () => {
     }
 });
 
-// Initialize bot
 bot.initialize().catch(error => {
     console.error('Failed to initialize bot:', error);
     process.exit(1);
 });
 
-// Export bot for testing if needed
 module.exports = bot;
