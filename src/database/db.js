@@ -95,6 +95,7 @@ class Database {
                 activated_guild_id VARCHAR(255),
                 activated_at TIMESTAMP NULL,
                 expires_at TIMESTAMP NULL,
+                admin_note TEXT,  // Add this line
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
             )`,
@@ -130,6 +131,15 @@ class Database {
                 console.error(`Error creating table: ${error.message}`);
                 // Continue with other tables even if one fails
             }
+        }
+
+        try {
+            await this.pool.execute(`
+                ALTER TABLE premium_licenses 
+                ADD COLUMN IF NOT EXISTS admin_note TEXT
+            `);
+        } catch (error) {
+            console.log('Note: admin_note column may already exist or error:', error.message);
         }
     }
 
