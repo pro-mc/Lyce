@@ -1,5 +1,5 @@
-const mysql = require('mysql2/promise');
-const config = require('../../config/config');
+const mysql = require("mysql2/promise");
+const config = require("../../config/config");
 
 class Database {
     constructor() {
@@ -11,16 +11,16 @@ class Database {
             database: config.database.name,
             waitForConnections: true,
             connectionLimit: 10,
-            queueLimit: 0
+            queueLimit: 0,
         });
     }
 
     async initialize() {
         try {
             await this.createTables();
-            console.log('Database initialized successfully');
+            console.log("Database initialized successfully");
         } catch (error) {
-            console.error('Database initialization failed:', error);
+            console.error("Database initialization failed:", error);
             throw error;
         }
     }
@@ -99,7 +99,7 @@ class Database {
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
             )`,
-    
+
             `CREATE TABLE IF NOT EXISTS payments (
                 id VARCHAR(50) PRIMARY KEY,
                 user_id VARCHAR(255),
@@ -112,7 +112,7 @@ class Database {
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (license_id) REFERENCES premium_licenses(id) ON DELETE SET NULL
             )`,
-    
+
             `CREATE TABLE IF NOT EXISTS premium_features (
                 guild_id VARCHAR(255) PRIMARY KEY,
                 is_premium BOOLEAN DEFAULT false,
@@ -120,8 +120,7 @@ class Database {
                 features JSON,
                 expires_at TIMESTAMP NULL,
                 activated_at TIMESTAMP NULL,
-                FOREIGN KEY (guild_id) REFERENCES server_settings(guild_id) ON DELETE CASCADE
-            )`
+            )`,
         ];
 
         for (const tableQuery of tables) {
@@ -139,7 +138,10 @@ class Database {
                 ADD COLUMN IF NOT EXISTS admin_note TEXT
             `);
         } catch (error) {
-            console.log('Note: admin_note column may already exist or error:', error.message);
+            console.log(
+                "Note: admin_note column may already exist or error:",
+                error.message,
+            );
         }
     }
 
@@ -148,30 +150,30 @@ class Database {
             const [rows] = await this.pool.execute(sql, params);
             return rows;
         } catch (error) {
-            console.error('Database query error:', error);
+            console.error("Database query error:", error);
             throw error;
         }
     }
 
     async getUser(userId) {
         const [rows] = await this.pool.execute(
-            'SELECT * FROM users WHERE id = ?',
-            [userId]
+            "SELECT * FROM users WHERE id = ?",
+            [userId],
         );
         return rows[0];
     }
 
     async createUser(userId, username, discriminator) {
         await this.pool.execute(
-            'INSERT INTO users (id, username, discriminator) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE username = ?, discriminator = ?',
-            [userId, username, discriminator, username, discriminator]
+            "INSERT INTO users (id, username, discriminator) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE username = ?, discriminator = ?",
+            [userId, username, discriminator, username, discriminator],
         );
     }
 
     async updateBalance(userId, amount) {
         await this.pool.execute(
-            'UPDATE users SET balance = balance + ? WHERE id = ?',
-            [amount, userId]
+            "UPDATE users SET balance = balance + ? WHERE id = ?",
+            [amount, userId],
         );
     }
 }
