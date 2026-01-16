@@ -6,11 +6,9 @@ module.exports = {
         .setDescription('Check premium status and features'),
 
     async execute(interaction, client) {
-        // Defer immediately
         await interaction.deferReply();
 
         try {
-            // Check if premiumManager exists
             if (!client.premiumManager) {
                 return interaction.editReply({ 
                     content: '❌ Premium system is not initialized. Please contact the bot administrator.' 
