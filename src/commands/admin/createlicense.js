@@ -12,7 +12,7 @@ module.exports = {
                 .addChoices(
                     { name: 'Monthly', value: 'monthly' },
                     { name: 'Yearly', value: 'yearly' },
-                    name: 'Lifetime', value: 'lifetime' }
+                    { name: 'Lifetime', value: 'lifetime' }  // Fixed: Added missing {
                 ))
         .addUserOption(option =>
             option.setName('user')
