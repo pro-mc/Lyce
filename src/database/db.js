@@ -79,11 +79,18 @@ class Database {
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )`,
 
-            `CREATE TABLE IF NOT EXISTS premium_servers (
-                guild_id VARCHAR(255) PRIMARY KEY,
-                premium_tier ENUM('monthly', 'lifetime'),
-                purchased_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                expires_at TIMESTAMP NULL
+            `CREATE TABLE IF NOT EXISTS premium_licenses (
+                id VARCHAR(50) PRIMARY KEY,
+                license_key VARCHAR(100) UNIQUE,
+                tier ENUM('monthly', 'lifetime', 'yearly') NOT NULL,
+                status ENUM('active', 'inactive', 'revoked', 'expired') DEFAULT 'inactive',
+                purchaser_discord_id VARCHAR(255),
+                activated_guild_id VARCHAR(255),
+                activated_at TIMESTAMP NULL,
+                expires_at TIMESTAMP NULL,
+                admin_note TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
             )`,
 
             `CREATE TABLE IF NOT EXISTS premium_licenses (
