@@ -1,5 +1,4 @@
 const { EmbedBuilder } = require('discord.js');
-const ColorHelper = require('../utils/colorHelper');
 
 module.exports = {
     name: 'interactionCreate',
@@ -16,6 +15,12 @@ module.exports = {
         } catch (error) {
             console.error(`Error executing ${interaction.commandName}:`, error);
             
+            // Handle unknown interaction errors (timeouts)
+            if (error.code === 10062) {
+                console.log(`Interaction ${interaction.id} expired/timed out for command ${interaction.commandName}`);
+                return; // Don't try to respond to expired interactions
+            }
+            
             // Create error embed
             const errorEmbed = new EmbedBuilder()
                 .setColor(0xff0000)
@@ -28,20 +33,24 @@ module.exports = {
             
             // Try to reply to the interaction
             try {
+                // Check interaction state
                 if (interaction.replied || interaction.deferred) {
                     await interaction.followUp({ 
                         embeds: [errorEmbed], 
-                        ephemeral: true 
+                        flags: 64 // Use MessageFlags.Ephemeral
                     });
                 } else {
                     await interaction.reply({ 
                         embeds: [errorEmbed], 
-                        ephemeral: true 
+                        flags: 64 // Use MessageFlags.Ephemeral
                     });
                 }
             } catch (replyError) {
-                console.error('Failed to send error message:', replyError);
+                // Ignore "already acknowledged" errors
+                if (replyError.code !== 40060) {
+                    console.error('Failed to send error message:', replyError);
+                }
             }
         }
     }
-};
+}
