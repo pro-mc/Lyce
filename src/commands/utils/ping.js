@@ -1,4 +1,5 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+const { fixTables } = require('../../database/db');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -6,20 +7,17 @@ module.exports = {
         .setDescription("Check the bot's latency"),
 
     async execute(interaction, client) {
-        // Send initial reply
         const sent = await interaction.reply({ 
             content: '🏓 Pinging...', 
             fetchReply: true,
-            ephemeral: false // Change to false to make it visible
+            ephemeral: fixTables
         });
         
-        // Calculate latency
         const latency = sent.createdTimestamp - interaction.createdTimestamp;
         const apiLatency = Math.round(client.ws.ping);
         
-        // Create embed
         const embed = new EmbedBuilder()
-            .setColor(client.config.bot.color || 3447003) // Use config color or default
+            .setColor(client.config.bot.color || 3447003)
             .setTitle('🏓 Pong!')
             .addFields(
                 { 
@@ -39,9 +37,8 @@ module.exports = {
                 iconURL: interaction.user.displayAvatarURL() 
             });
         
-        // Edit the original reply with the embed
         await interaction.editReply({ 
-            content: null, // Remove the "Pinging..." text
+            content: null,
             embeds: [embed] 
         });
     }
