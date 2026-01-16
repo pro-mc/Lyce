@@ -9,8 +9,10 @@ const commandPermissions = [];
 const commandsPath = path.join(__dirname, 'src', 'commands');
 const commandFolders = fs.readdirSync(commandsPath);
 
-// Owner IDs (replace with your Discord ID)
-const OWNER_IDS = [process.env.OWNER_ID];
+// Owner ID
+const OWNER_ID = process.env.OWNER_ID || '1240540042926096406';
+
+console.log('Loading commands...');
 
 // Load all commands
 for (const folder of commandFolders) {
@@ -18,27 +20,42 @@ for (const folder of commandFolders) {
     const commandFiles = fs.readdirSync(folderPath).filter(file => file.endsWith('.js'));
     
     for (const file of commandFiles) {
-        const filePath = path.join(folderPath, file);
-        const command = require(filePath);
-        
-        if ('data' in command) {
-            commands.push(command.data.toJSON());
+        try {
+            const filePath = path.join(folderPath, file);
+            delete require.cache[require.resolve(filePath)]; // Clear cache
+            const command = require(filePath);
             
-            // Set permissions for admin commands
-            if (folder === 'admin') {
-                commandPermissions.push({
-                    commandName: command.data.name,
-                    permissions: OWNER_IDS.map(ownerId => ({
-                        id: ownerId,
-                        type: ApplicationCommandPermissionType.User,
-                        permission: true
-                    }))
-                });
+            if ('data' in command && 'execute' in command) {
+                commands.push(command.data.toJSON());
+                
+                // Set permissions for admin commands
+                if (folder === 'admin') {
+                    commandPermissions.push({
+                        commandName: command.data.name,
+                        permissions: [{
+                            id: OWNER_ID,
+                            type: ApplicationCommandPermissionType.User,
+                            permission: true
+                        }]
+                    });
+                }
+                
+                console.log(`✓ Loaded command: ${command.data.name}`);
+            } else {
+                console.log(`⚠️ Skipping ${file}: Missing "data" or "execute" property`);
             }
-            
-            console.log(`✓ Loaded command: ${command.data.name}`);
+        } catch (error) {
+            console.error(`✗ Failed to load command ${file} in ${folder}:`, error.message);
+            if (error.message.includes('createlicense')) {
+                console.error('Check syntax in createlicense.js - there might be a typo');
+            }
         }
     }
+}
+
+if (commands.length === 0) {
+    console.error('No commands loaded! Check your command files for errors.');
+    process.exit(1);
 }
 
 const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
@@ -55,36 +72,34 @@ const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
 
         console.log(`Successfully registered ${data.length} commands globally.`);
 
-        // Apply permissions for admin commands in each guild
-        const guilds = await rest.get(Routes.userGuilds());
-        
-        for (const guild of guilds) {
-            try {
-                const commands = await rest.get(
-                    Routes.applicationGuildCommands(process.env.CLIENT_ID, guild.id)
-                );
-                
-                for (const perm of commandPermissions) {
-                    const command = commands.find(c => c.name === perm.commandName);
-                    if (command) {
-                        await rest.put(
-                            Routes.applicationCommandPermissions(
-                                process.env.CLIENT_ID,
-                                guild.id,
-                                command.id
-                            ),
-                            { body: { permissions: perm.permissions } }
-                        );
-                        console.log(`Set permissions for ${command.name} in ${guild.name}`);
-                    }
+        // If you want to set permissions in specific guilds
+        if (process.env.GUILD_ID) {
+            const guildId = process.env.GUILD_ID;
+            const commands = await rest.get(
+                Routes.applicationGuildCommands(process.env.CLIENT_ID, guildId)
+            );
+            
+            for (const perm of commandPermissions) {
+                const command = commands.find(c => c.name === perm.commandName);
+                if (command) {
+                    await rest.put(
+                        Routes.applicationCommandPermissions(
+                            process.env.CLIENT_ID,
+                            guildId,
+                            command.id
+                        ),
+                        { body: { permissions: perm.permissions } }
+                    );
+                    console.log(`Set permissions for ${command.name} in guild ${guildId}`);
                 }
-            } catch (error) {
-                console.error(`Failed to set permissions in guild ${guild.name}:`, error.message);
             }
         }
 
-        console.log('All commands deployed successfully!');
+        console.log('✅ All commands deployed successfully!');
     } catch (error) {
-        console.error('Error deploying commands:', error);
+        console.error('❌ Error deploying commands:', error);
+        if (error.code === 50001) {
+            console.error('Missing Access - Check bot permissions in the server');
+        }
     }
 })();
