@@ -214,19 +214,32 @@ class PremiumManager {
         }
     }
     
-    // Update the checkPremiumStatus method to match what your premium command expects
     async checkPremiumStatus(guildId) {
-        const result = await this.checkGuildPremium(guildId);
-        
-        if (result.isPremium) {
-            return {
-                isPremium: true,
-                tier: result.tier,
-                features: result.features || [],
-                activatedAt: result.activatedAt,
-                expiresAt: result.expiresAt
-            };
-        } else {
+        try {
+            // Use checkGuildPremium which already exists
+            const result = await this.checkGuildPremium(guildId);
+            
+            if (result.isPremium) {
+                return {
+                    isPremium: true,
+                    tier: result.tier,
+                    tierName: result.tierName,
+                    features: result.features || [],
+                    activatedAt: result.activatedAt,
+                    expiresAt: result.expiresAt,
+                    licenseKey: result.licenseKey
+                };
+            } else {
+                return {
+                    isPremium: false,
+                    tier: 'free',
+                    features: [],
+                    activatedAt: null,
+                    expiresAt: null
+                };
+            }
+        } catch (error) {
+            console.error('Error in checkPremiumStatus:', error);
             return {
                 isPremium: false,
                 tier: 'free',
