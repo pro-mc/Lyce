@@ -18,7 +18,7 @@ class Database {
     async initialize() {
         try {
             await this.createTables();
-            await this.fixTables(); // Add this to fix existing tables
+            await this.fixTables();
             console.log("Database initialized successfully");
         } catch (error) {
             console.error("Database initialization failed:", error);
@@ -114,7 +114,7 @@ class Database {
                 features JSON,
                 expires_at TIMESTAMP NULL,
                 activated_at TIMESTAMP NULL
-            )` // REMOVED the trailing comma
+            )`
         ];
 
         for (const tableQuery of tables) {
@@ -125,13 +125,11 @@ class Database {
             }
         }
 
-        // Add missing columns if needed
         await this.addMissingColumns();
     }
 
     async addMissingColumns() {
         try {
-            // Check and add admin_note if missing
             const [columns] = await this.pool.execute(`
                 SELECT COLUMN_NAME 
                 FROM INFORMATION_SCHEMA.COLUMNS 
@@ -154,7 +152,6 @@ class Database {
 
     async fixTables() {
         try {
-            // Remove foreign key constraint if it exists
             console.log('Checking for foreign key constraints...');
             
             const [constraints] = await this.pool.execute(`
@@ -177,7 +174,6 @@ class Database {
                 }
             }
             
-            // Ensure server_settings entry exists for all guilds that have premium
             const [premiumGuilds] = await this.pool.execute(`
                 SELECT DISTINCT guild_id 
                 FROM premium_features 
